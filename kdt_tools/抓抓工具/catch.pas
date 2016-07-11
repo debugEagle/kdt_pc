@@ -9,12 +9,20 @@ uses
   Vcl.ComCtrls,
   Vcl.StdCtrls, data, Vcl.Imaging.pngimage, Vcl.Menus, Vcl.ToolWin, Vcl.Buttons,
   IdBaseComponent, IdComponent, IdTCPConnection, IdTCPClient, IdHTTP,
-  IdAuthentication, System.Math, GDIPOBJ, GDIPAPI, setLarge, Vcl.ActnMan,
+  IdAuthentication, System.Math, GDIPOBJ, GDIPAPI, setLarge, transfer,
+  Vcl.ActnMan, cutPic,
   Vcl.ActnCtrls, System.ImageList, Vcl.ImgList;
 
 type
+  TWinShowData = record
+    dataShow: Boolean; { 数据处理界面 }
+    setLargeShow: Boolean; { 放大镜 取色取点界面 }
+    transShow: Boolean; { 透明图处理工具 }
+  end;
+
   TImageData = record
     aPicture: TPicture; // 图片信息
+    aBitMap: TBitmap; // bitMap 图片信息
     fullName: string; // 图片的全名称
     showName: string; // 图片的显示名称
     checked: Boolean; // 图片是否被选择
@@ -49,7 +57,7 @@ type
     N11: TMenuItem;
     N12: TMenuItem;
     N13: TMenuItem;
-    N15: TMenuItem;
+    NTransfer: TMenuItem;
     NCalcData: TMenuItem;
     N17: TMenuItem;
     N18: TMenuItem;
@@ -58,6 +66,11 @@ type
     showBar: TToolBar;
     btnOpen: TToolButton;
     toolBarImageList: TImageList;
+    btnSave: TToolButton;
+    btnSaveAs: TToolButton;
+    btnDataWin: TToolButton;
+    btnSetLargeWin: TToolButton;
+    btnTransferWin: TToolButton;
     procedure btnTestClick(Sender: TObject);
     procedure imgFirstMouseMove(Sender: TObject; Shift: TShiftState;
       X, Y: Integer);
@@ -76,12 +89,17 @@ type
     procedure imgShowMouseMove(Sender: TObject; Shift: TShiftState;
       X, Y: Integer);
     procedure NSetLargeClick(Sender: TObject);
+    procedure NTransferClick(Sender: TObject);
+    procedure btnSetLargeWinClick(Sender: TObject);
+    procedure btnTransferWinClick(Sender: TObject);
+    procedure btnDataWinClick(Sender: TObject);
   private
     { Private declarations }
     wtRangStart, wtRangEnd, wtClick: ATOM; { 数据处理窗口的 3 个 hotkey }
     { 放大镜窗口的 14 个 hotkey }
     wtZero, wtNine, wtEight, wtSeven, wtSix, wtFive, wtFour, wtThree, wtTwo,
-      wtOne, wtHotKeyRight, wtHotKeyDown, wtHotKeyUp, wtHotKeyLeft: ATOM;
+      wtOne, wtHotKeyRight, wtHotKeyDown, wtHotKeyUp, wtHotKeyLeft,
+      wtCutPic: ATOM;
 
     wtLeft, wtTop: Integer;
     procedure setImageShowRect();
@@ -97,6 +115,9 @@ type
     function ClacShowCaption(btnWidth: Integer; aFullName: string): string;
     procedure HideSpeedBtns(aSpeedBtn: TSpeedButton);
     procedure ShowDefaultImage();
+
+  private
+    procedure CreateParams(var Params: TCreateParams); override;
   end;
 
 var
@@ -108,6 +129,8 @@ var
   g_moveSign: Boolean; { mouse 移动的标志 }
   g_moveX, g_moveY: Integer; { mouse 移动到的坐标 }
 
+  g_WinShowData: TWinShowData;
+
 const
   lableOfPicNameHeight = 20; { 图片的名字显示区的高度 }
   defaultWidth = 180; { 显示图片名称的标签的 默认width }
@@ -118,6 +141,13 @@ const
 implementation
 
 {$R *.dfm}
+
+// 双缓冲？
+procedure TForm1.CreateParams(var Params: TCreateParams);
+begin
+  inherited;
+  Params.ExStyle := 33554432; // 0x 02 00 00 00
+end;
 
 function TForm1.ShowAImage(aFullName: string): Boolean; { 显示一个 image }
 var
@@ -174,7 +204,8 @@ begin
       end;
     end;
 
-    Self.imgShow.Picture.Assign(g_ImageArr[sameTextIndex].aPicture); { 图片中显示之 }
+    Self.imgShow.Picture.Bitmap.Assign(g_ImageArr[sameTextIndex].aBitMap);
+    { 图片中显示之 }
   end;
   Result := True;
 end;
@@ -183,6 +214,8 @@ function TForm1.LoadAImage(aPicture: TPicture; aFullName: string): Boolean;
 { 加载一个图片到arr中 }
 var
   index: Integer;
+  Png: TPngObject;
+  aStream: TStream;
 begin
   Result := False;
   for index := 0 to Length(g_ImageArr) - 1 do
@@ -190,6 +223,9 @@ begin
     if SameText(g_ImageArr[index].fullName, aFullName) then
       Exit;
   end;
+
+  Png := TPngObject.Create;
+  aStream := TStream.Create;
 
   for index := 0 to Length(g_ImageArr) - 1 do
   begin
@@ -202,9 +238,16 @@ begin
       g_ImageArr[index].aPicture.Assign(aPicture);
       g_ImageArr[index].fullName := aFullName;
       g_ImageArr[index].showName := ExtractFileName(aFullName);
+
+      Png.Assign(aPicture);
+      Png.SaveToStream(aStream);
+      g_ImageArr[index].aBitMap.Assign(Png);
       Break;
     end;
   end;
+
+  FreeAndNil(aStream);
+  FreeAndNil(Png);
 end;
 
 { aSpeedBtn 的 Down 属性 置为true }
@@ -226,6 +269,9 @@ begin
       g_ImageArr[index].show := True;
       g_ImageArr[index].checkBtn.GroupIndex := 1;
       g_ImageArr[index].checkBtn.Down := True;
+      { 传递一个 当前图片的 index }
+      SendMessage(SetLargeForm.Handle, WM_USER + $202, index, 0);
+
       imgShow.Picture.Assign(g_ImageArr[index].aPicture);
     end
     else
@@ -335,6 +381,7 @@ begin
   begin
 
     aImageArr[index].aPicture := TPicture.Create();
+    aImageArr[index].aBitMap := TBitmap.Create;
     aImageArr[index].fullName := '';
     aImageArr[index].showName := '';
     aImageArr[index].checked := False;
@@ -521,6 +568,15 @@ begin
   Result := aPoint;
 end;
 
+procedure TForm1.btnDataWinClick(Sender: TObject);
+begin
+  Self.NCalcData.checked := not Self.NCalcData.checked;
+  if Self.NCalcData.checked then
+    FormClacData.show
+  else
+    FormClacData.Hide;
+end;
+
 procedure TForm1.btnFirstCloseClick(Sender: TObject);
 begin
   ShowMessage('click speedbutton');
@@ -531,6 +587,15 @@ begin
   // ShowMessage('打开一个图片');
   Self.OpenAPicByOpenDlg; // 加载一张图片到 imageArr中 然后 置 显示的 为当前图片
   Self.CalcBtnRang(); // 计算每个speedBtn的 range 然后置他们到指定位置
+end;
+
+procedure TForm1.btnSetLargeWinClick(Sender: TObject);
+begin
+  Self.NSetLarge.checked := not Self.NSetLarge.checked;
+  if Self.NSetLarge.checked then
+    SetLargeForm.show
+  else
+    SetLargeForm.Hide;
 end;
 
 function TForm1.OpenAPicByOpenDlg(): Boolean;
@@ -573,6 +638,15 @@ begin
     FormClacData.show;
 end;
 
+procedure TForm1.btnTransferWinClick(Sender: TObject);
+begin
+  Self.NTransfer.checked := not Self.NTransfer.checked;
+  if Self.NTransfer.checked then
+    tranForm.show
+  else
+    tranForm.Hide;
+end;
+
 procedure TForm1.FormCreate(Sender: TObject);
 begin
   // 注册 alt + 1 热键，提取 范围的第一个坐标
@@ -595,6 +669,13 @@ begin
     wtClick := GlobalAddAtom('WThotKey_click');
   end;
   RegisterHotKey(Self.Handle, wtClick, MOD_ALT, $51);
+
+  // 注册 alt + a 热键，截图
+  if FindAtom('WThotKey_cutPic') = 0 then
+  begin
+    wtCutPic := GlobalAddAtom('WThotKey_cutPic');
+  end;
+  RegisterHotKey(Self.Handle, wtCutPic, MOD_ALT, $41);
 
   // 注册 小键盘 ← 热键
   if FindAtom('WThotKey_left') = 0 then
@@ -631,55 +712,55 @@ begin
   begin
     wtTwo := GlobalAddAtom('WThotKey_two');
   end;
-  RegisterHotKey(Self.Handle, wtTwo, 0, $31);
+  RegisterHotKey(Self.Handle, wtTwo, 0, $32);
   // 注册 3 热键
   if FindAtom('WThotKey_three') = 0 then
   begin
     wtThree := GlobalAddAtom('WThotKey_three');
   end;
-  RegisterHotKey(Self.Handle, wtThree, 0, $31);
+  RegisterHotKey(Self.Handle, wtThree, 0, $33);
   // 注册 4 热键
   if FindAtom('WThotKey_four') = 0 then
   begin
     wtFour := GlobalAddAtom('WThotKey_four');
   end;
-  RegisterHotKey(Self.Handle, wtFour, 0, $31);
+  RegisterHotKey(Self.Handle, wtFour, 0, $34);
   // 注册 5 热键
   if FindAtom('WThotKey_five') = 0 then
   begin
     wtFive := GlobalAddAtom('WThotKey_five');
   end;
-  RegisterHotKey(Self.Handle, wtFive, 0, $31);
+  RegisterHotKey(Self.Handle, wtFive, 0, $35);
   // 注册 6 热键
   if FindAtom('WThotKey_six') = 0 then
   begin
     wtSix := GlobalAddAtom('WThotKey_six');
   end;
-  RegisterHotKey(Self.Handle, wtSix, 0, $31);
+  RegisterHotKey(Self.Handle, wtSix, 0, $36);
   // 注册 7 热键
   if FindAtom('WThotKey_seven') = 0 then
   begin
     wtSeven := GlobalAddAtom('WThotKey_seven');
   end;
-  RegisterHotKey(Self.Handle, wtSeven, 0, $31);
+  RegisterHotKey(Self.Handle, wtSeven, 0, $37);
   // 注册 8 热键
   if FindAtom('WThotKey_eight') = 0 then
   begin
     wtEight := GlobalAddAtom('WThotKey_eight');
   end;
-  RegisterHotKey(Self.Handle, wtEight, 0, $31);
+  RegisterHotKey(Self.Handle, wtEight, 0, $38);
   // 注册 9 热键
   if FindAtom('WThotKey_nine') = 0 then
   begin
     wtNine := GlobalAddAtom('WThotKey_nine');
   end;
-  RegisterHotKey(Self.Handle, wtNine, 0, $31);
+  RegisterHotKey(Self.Handle, wtNine, 0, $39);
   // 注册 0 热键
   if FindAtom('WThotKey_zero') = 0 then
   begin
     wtZero := GlobalAddAtom('WThotKey_zero');
   end;
-  RegisterHotKey(Self.Handle, wtZero, 0, $31);
+  RegisterHotKey(Self.Handle, wtZero, 0, $30);
 
   Self.setImageShowRect;
   InitImageArr(g_ImageArr);
@@ -706,25 +787,50 @@ begin
   UnRegisterHotKey(Self.Handle, wtRangEnd); // 释放热键
   GlobalDeleteAtom(wtRangEnd);
 
+  UnRegisterHotKey(Self.Handle, wtCutPic);
+  GlobalDeleteAtom(wtCutPic);
 
-  UnregisterHotKey(Self.Handle,wtHotKeyRight);
-  GlobalDeleteAtom(wtHotKeyRight)             ;
+  UnRegisterHotKey(Self.Handle, wtHotKeyRight);
+  GlobalDeleteAtom(wtHotKeyRight);
 
-  UnregisterHotKey(Self.Handle,wtHotKeyLeft);
+  UnRegisterHotKey(Self.Handle, wtHotKeyLeft);
   GlobalDeleteAtom(wtHotKeyLeft);
 
-  UnregisterHotKey(Self.Handle,wtHotKeyUp);
+  UnRegisterHotKey(Self.Handle, wtHotKeyUp);
   GlobalDeleteAtom(wtHotKeyUp);
 
-  UnregisterHotKey(Self.Handle,wtHotKeyDown);
+  UnRegisterHotKey(Self.Handle, wtHotKeyDown);
   GlobalDeleteAtom(wtHotKeyDown);
 
+  UnRegisterHotKey(Self.Handle, wtOne);
+  GlobalDeleteAtom(wtOne);
 
+  UnRegisterHotKey(Self.Handle, wtTwo);
+  GlobalDeleteAtom(wtTwo);
 
+  UnRegisterHotKey(Self.Handle, wtThree);
+  GlobalDeleteAtom(wtThree);
 
+  UnRegisterHotKey(Self.Handle, wtFour);
+  GlobalDeleteAtom(wtFour);
 
+  UnRegisterHotKey(Self.Handle, wtFive);
+  GlobalDeleteAtom(wtFive);
 
+  UnRegisterHotKey(Self.Handle, wtSix);
+  GlobalDeleteAtom(wtSix);
 
+  UnRegisterHotKey(Self.Handle, wtSeven);
+  GlobalDeleteAtom(wtSeven);
+
+  UnRegisterHotKey(Self.Handle, wtEight);
+  GlobalDeleteAtom(wtEight);
+
+  UnRegisterHotKey(Self.Handle, wtNine);
+  GlobalDeleteAtom(wtNine);
+
+  UnRegisterHotKey(Self.Handle, wtZero);
+  GlobalDeleteAtom(wtZero);
 
   // FreeAndNil  g_ImageArra数组中的所有对象
   for index := 0 to Length(g_ImageArr) - 1 do
@@ -738,7 +844,8 @@ end;
 procedure TForm1.hotkey(var msg: TMessage);
 var
   P: TPoint;
-  X, Y, frame, Caption: Integer;
+  X, Y, frame, Caption, tmpX, tmpY: Integer;
+  oldPoint: TPoint;
 begin
   GetCursorPos(P);
   // left 和 top 有一个小于0 直接退出
@@ -752,6 +859,9 @@ begin
   X := P.X - Self.Left - frame - Self.imgShow.Left + 1;
   Y := P.Y - Self.Top - Caption - frame - Self.imgShow.Top + 2 -
     lableOfPicNameHeight;
+
+  tmpX := X - 4;
+  tmpY := Y - 6;
 
   if TWMHotKey(msg).hotkey = wtClick then
   begin
@@ -771,6 +881,154 @@ begin
     // 结束坐标的 热键
     FormClacData.edt_x2.Text := IntToStr(X);
     FormClacData.edt_y2.Text := IntToStr(Y);
+  end
+  else if TWMHotKey(msg).hotkey = wtCutPic then
+  begin
+
+    // 保存 工具 界面状态
+    if FormClacData.Showing then
+      g_WinShowData.dataShow := True
+    else
+      g_WinShowData.dataShow := False;
+
+    if SetLargeForm.Showing then
+      g_WinShowData.setLargeShow := True
+    else
+      g_WinShowData.setLargeShow := False;
+
+    if tranForm.Showing then
+      g_WinShowData.transShow := True
+    else
+      g_WinShowData.transShow := False;
+
+    // 隐藏所有工具界面
+    NSetLarge.checked := False;
+    SetLargeForm.Hide;
+
+    NTransfer.checked := False;
+    tranForm.Hide;
+
+    NCalcData.checked := False;
+    FormClacData.Hide;
+
+    Sleep(200);
+
+    FrmCutPic.CopyPic;
+    FrmCutPic.show;
+  end
+  else if TWMHotKey(msg).hotkey = wtHotKeyRight then
+  begin
+    // 小键盘向右
+    GetCursorPos(oldPoint);
+    SetCursorPos(oldPoint.X + 1, oldPoint.Y);
+  end
+  else if TWMHotKey(msg).hotkey = wtHotKeyLeft then
+  begin
+    // 小键盘向左
+    GetCursorPos(oldPoint);
+    SetCursorPos(oldPoint.X - 1, oldPoint.Y);
+  end
+  else if TWMHotKey(msg).hotkey = wtHotKeyUp then
+  begin
+    // 小键盘向上
+    GetCursorPos(oldPoint);
+    SetCursorPos(oldPoint.X, oldPoint.Y - 1);
+  end
+  else if TWMHotKey(msg).hotkey = wtHotKeyDown then
+  begin
+    // 小键盘向下
+    GetCursorPos(oldPoint);
+    SetCursorPos(oldPoint.X, oldPoint.Y + 1);
+  end
+  else if TWMHotKey(msg).hotkey = wtOne then
+  begin
+    // 键盘 1
+    SetLargeForm.edtFirstPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlFirst.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(0, tmpX, tmpY,
+      SetLargeForm.pnlFirst.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtTwo then
+  begin
+    // 键盘 2
+    SetLargeForm.edtSeondPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlSecond.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(1, tmpX, tmpY,
+      SetLargeForm.pnlSecond.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtThree then
+  begin
+    // 键盘 3
+    SetLargeForm.edtThirdPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlThree.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(2, tmpX, tmpY,
+      SetLargeForm.pnlThree.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtFour then
+  begin
+    // 键盘 4
+    SetLargeForm.edtFourPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlFour.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(3, tmpX, tmpY,
+      SetLargeForm.pnlFour.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtFive then
+  begin
+    // 键盘 5
+    SetLargeForm.edtFivePoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlFive.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(4, tmpX, tmpY,
+      SetLargeForm.pnlFive.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtSix then
+  begin
+    // 键盘 6
+    SetLargeForm.edtSixPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlSix.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(5, tmpX, tmpY,
+      SetLargeForm.pnlSix.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtSeven then
+  begin
+    // 键盘 7
+    SetLargeForm.edtSevenPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlSeven.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(6, tmpX, tmpY,
+      SetLargeForm.pnlSeven.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtEight then
+  begin
+    // 键盘 8
+    SetLargeForm.edtEightPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlEight.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(7, tmpX, tmpY,
+      SetLargeForm.pnlEight.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtNine then
+  begin
+    // 键盘 9
+    SetLargeForm.edtNinePoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlNine.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(8, tmpX, tmpY,
+      SetLargeForm.pnlNine.Color);
+  end
+  else if TWMHotKey(msg).hotkey = wtZero then
+  begin
+    // 键盘 0
+    SetLargeForm.edtTenPoint.Text := IntToStr(tmpX) + ' , ' + IntToStr(tmpY);
+    SetLargeForm.pnlTen.Color := Self.imgShow.Picture.Bitmap.Canvas.Pixels
+      [tmpX, tmpY];
+    SetLargeForm.SetPointDataColorAndPointByIndex(9, tmpX, tmpY,
+      SetLargeForm.pnlTen.Color);
   end;
 
 end;
@@ -786,6 +1044,8 @@ procedure TForm1.imgShowMouseMove(Sender: TObject; Shift: TShiftState;
 begin
   if g_ImgShowLarge <> nil then
     Exit;
+
+  pnlShowData.Caption := '坐标(' + IntToStr(X) + ',' + IntToStr(Y) + ')';
   if SetLargeForm.Showing then
   begin
 
@@ -793,9 +1053,8 @@ begin
     g_moveY := Y;
 
     PostMessage(SetLargeForm.Handle, WM_USER + $201, g_moveX, g_moveY);
-
   end;
-  pnlShowData.Caption := '坐标(' + IntToStr(X) + ',' + IntToStr(Y) + ')';
+
 end;
 
 procedure TForm1.mMenuFileOpenClick(Sender: TObject);
@@ -826,6 +1085,15 @@ begin
     SetLargeForm.Hide;
   end;
 
+end;
+
+procedure TForm1.NTransferClick(Sender: TObject);
+begin
+  NTransfer.checked := not NTransfer.checked;
+  if NTransfer.checked then
+    tranForm.show
+  else
+    tranForm.Hide;
 end;
 
 end.

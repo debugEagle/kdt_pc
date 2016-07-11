@@ -22,9 +22,6 @@ Coordinates=147,151,40,36
 [N3]
 Coordinates=49,151,40,36
 
-[N15]
-Coordinates=0,115,40,36
-
 [N6]
 Coordinates=320,1,40,36
 
@@ -64,4 +61,7 @@ Coordinates=18,77,40,36
 
 [mMenuFileOpen]
 Coordinates=320,56,40,36
+
+[NTransfer]
+Coordinates=0,115,40,36
 

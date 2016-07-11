@@ -3,7 +3,8 @@ unit data;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants,
+  System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Menus,
   Vcl.ComCtrls;
 
@@ -35,6 +36,7 @@ type
   private
     { Private declarations }
     function getTableString: string;
+    procedure CreateParams(var Params: TCreateParams); override;
   public
     { Public declarations }
   end;
@@ -46,6 +48,13 @@ var
 implementation
 
 {$R *.dfm}
+
+// 双缓冲？
+procedure TFormClacData.CreateParams(var Params: TCreateParams);
+begin
+  inherited;
+  Params.ExStyle := 33554432; // 0x 02 00 00 00
+end;
 
 function TFormClacData.getTableString: string;
 var
@@ -83,17 +92,17 @@ begin
 
   colorStr := edt_color.Text;
   offersetColor := edt_offersetColor.Text;
-  g_strTable := '{str = ''' + ''',' + 'x=' + inttostr(clickx) + ',y=' + inttostr
-    (clicky) + ',x1=' + inttostr(x1) + ',y1=' + inttostr(y1) + ',x2=' + inttostr
-    (x2) + ',y2=' + inttostr(y2) + ',cColor=''' + colorStr + ''',' +
+  g_strTable := '{str = ''' + ''',' + 'x=' + inttostr(clickx) + ',y=' +
+    inttostr(clicky) + ',x1=' + inttostr(x1) + ',y1=' + inttostr(y1) + ',x2=' +
+    inttostr(x2) + ',y2=' + inttostr(y2) + ',cColor=''' + colorStr + ''',' +
     'cSim =0.9,cDir = 1' + '},';
-  {str = '副本里',x = -1 ,y = -1 ,dDis =10,x1 =1023,y1 = 3,x2 = 1120,
-  y2 = 54,firstClor = 0xffdb29,
-  clor = "-3|-4|0x312421,3|-4|0x292021,0|5|0x946110,3|15|0x211818"}
+  { str = '副本里',x = -1 ,y = -1 ,dDis =10,x1 =1023,y1 = 3,x2 = 1120,
+    y2 = 54,firstClor = 0xffdb29,
+    clor = "-3|-4|0x312421,3|-4|0x292021,0|5|0x946110,3|15|0x211818" }
   g_colorTable := '{str = ''' + ''',' + 'x=' + inttostr(clickx) + ',y=' +
-    inttostr(clicky) + ',dDis = 10' + ',x1=' + inttostr(x1) + ',y1=' + inttostr(y1)
-    + ',x2=' + inttostr(x2) + ',y2=' + inttostr(y2) + ',firstClor=' + colorStr +
-    ',clor=''' + offersetColor + '''},';
+    inttostr(clicky) + ',dDis = 10' + ',x1=' + inttostr(x1) + ',y1=' +
+    inttostr(y1) + ',x2=' + inttostr(x2) + ',y2=' + inttostr(y2) + ',firstClor='
+    + colorStr + ',clor=''' + offersetColor + '''},';
 end;
 
 procedure TFormClacData.btnClearClick(Sender: TObject);
@@ -114,15 +123,14 @@ begin
   Self.getTableString;
   if cbbSelet.ItemIndex = 0 then
   begin
-    //ShowMessage('第一行');
+    // ShowMessage('第一行');
     Self.redt_table.Text := g_strTable;
   end
   else if cbbSelet.ItemIndex = 1 then
   begin
-    //ShowMessage('第二行');
+    // ShowMessage('第二行');
     Self.redt_table.Text := g_colorTable;
   end;
 end;
 
 end.
-

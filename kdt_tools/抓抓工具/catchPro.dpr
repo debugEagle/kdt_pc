@@ -7,7 +7,8 @@ uses
   Vcl.Styles,
   data in 'data.pas' {FormClacData},
   setLarge in 'setLarge.pas' {SetLargeForm},
-  transfer in 'transfer.pas' {tranForm};
+  transfer in 'transfer.pas' {tranForm},
+  cutPic in 'cutPic.pas' {FrmCutPic};
 
 {$R *.res}
 
@@ -19,5 +20,6 @@ begin
   Application.CreateForm(TFormClacData, FormClacData);
   Application.CreateForm(TSetLargeForm, SetLargeForm);
   Application.CreateForm(TtranForm, tranForm);
+  Application.CreateForm(TFrmCutPic, FrmCutPic);
   Application.Run;
 end.

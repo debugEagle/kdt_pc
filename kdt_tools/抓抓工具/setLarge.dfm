@@ -89,6 +89,12 @@ object SetLargeForm: TSetLargeForm
     Height = 13
     Caption = '0'
   end
+  object imgShow: TImage
+    Left = 3
+    Top = 0
+    Width = 225
+    Height = 225
+  end
   object edtFirstPoint: TEdit
     Left = 253
     Top = 6
@@ -102,6 +108,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 1
+    OnClick = chkFirstClick
   end
   object edtSeondPoint: TEdit
     Left = 253
@@ -262,6 +269,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 21
+    OnClick = chkSecondClick
   end
   object chkThree: TCheckBox
     Left = 360
@@ -269,6 +277,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 22
+    OnClick = chkThreeClick
   end
   object chkFour: TCheckBox
     Left = 360
@@ -276,6 +285,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 23
+    OnClick = chkFourClick
   end
   object chkFive: TCheckBox
     Left = 360
@@ -283,6 +293,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 24
+    OnClick = chkFiveClick
   end
   object chkSix: TCheckBox
     Left = 360
@@ -290,6 +301,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 25
+    OnClick = chkSixClick
   end
   object chkSeven: TCheckBox
     Left = 360
@@ -297,6 +309,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 26
+    OnClick = chkSevenClick
   end
   object chkEight: TCheckBox
     Left = 360
@@ -304,6 +317,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 27
+    OnClick = chkEightClick
   end
   object chkNine: TCheckBox
     Left = 360
@@ -311,6 +325,7 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 28
+    OnClick = chkNineClick
   end
   object chkTen: TCheckBox
     Left = 360
@@ -318,17 +333,17 @@ object SetLargeForm: TSetLargeForm
     Width = 17
     Height = 18
     TabOrder = 29
+    OnClick = chkTenClick
   end
   object pgcOrder: TPageControl
     Left = 0
     Top = 231
     Width = 393
     Height = 186
-    ActivePage = tsFindStr
+    ActivePage = tsFindColor
     TabOrder = 30
     object tsFindColor: TTabSheet
       Caption = 'findColor'
-      ExplicitLeft = 8
       object redtFindColor: TRichEdit
         Left = 0
         Top = 0
@@ -345,9 +360,6 @@ object SetLargeForm: TSetLargeForm
         ParentFont = False
         TabOrder = 0
         Zoom = 100
-        ExplicitLeft = 8
-        ExplicitWidth = 369
-        ExplicitHeight = 161
       end
     end
     object tsFindStr: TTabSheet
@@ -369,9 +381,6 @@ object SetLargeForm: TSetLargeForm
         ParentFont = False
         TabOrder = 0
         Zoom = 100
-        ExplicitLeft = 8
-        ExplicitWidth = 369
-        ExplicitHeight = 161
       end
     end
     object tsOcr: TTabSheet
@@ -393,10 +402,6 @@ object SetLargeForm: TSetLargeForm
         ParentFont = False
         TabOrder = 0
         Zoom = 100
-        ExplicitLeft = 8
-        ExplicitTop = 8
-        ExplicitWidth = 353
-        ExplicitHeight = 145
       end
     end
     object tsGetColor: TTabSheet
@@ -418,12 +423,26 @@ object SetLargeForm: TSetLargeForm
         ParentFont = False
         TabOrder = 0
         Zoom = 100
-        ExplicitLeft = 32
-        ExplicitTop = 16
-        ExplicitWidth = 329
-        ExplicitHeight = 129
       end
     end
+  end
+  object pnlWidth: TPanel
+    Left = 115
+    Top = 107
+    Width = 2
+    Height = 11
+    ParentBackground = False
+    TabOrder = 31
+    StyleElements = []
+  end
+  object pnlHeight: TPanel
+    Left = 110
+    Top = 111
+    Width = 11
+    Height = 3
+    ParentBackground = False
+    TabOrder = 32
+    StyleElements = []
   end
   object tmrSecond: TTimer
     Enabled = False
