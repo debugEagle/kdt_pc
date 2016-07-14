@@ -184,7 +184,6 @@ var
   index_width_max, index_height_max: Integer;
   bIn: Boolean;
   aBitMap: TBitmap;
-  HexColor: string;
 begin
   { TODO -oyangyss -c :  2016/5/20 19:03:32 }
   if (setBigDownX = -1) or (setBigDownY = -1) then
@@ -351,12 +350,8 @@ end;
 procedure TtranForm.CopyPic();
 var
   Width, Height: Integer;
-  intX, intY: Integer;
-  n_x, n_y: Integer;
   aBitMap: TBitmap;
 begin
-  n_x := g_X;
-  n_y := g_Y;
   aBitMap := TBitmap.Create;
   aBitMap.Width := 225;
   aBitMap.Height := 225;

@@ -105,7 +105,7 @@ type
 
 var
   SetLargeForm: TSetLargeForm;
-  aBitMap, showBitMap: TBitmap;
+  aBitMap, showBitMap,gSourceBitMap: TBitmap;
   Png: TPngObject;
   aStream: TStream;
   rt: TGPRectF;
@@ -131,7 +131,7 @@ var
 procedure TSetLargeForm.CreateParams(var Params: TCreateParams);
 begin
   inherited;
-  Params.ExStyle := 33554432; // 0x 02 00 00 00
+  // Params.ExStyle := 33554432; // 0x 02 00 00 00
 end;
 
 procedure TSetLargeForm.chkEightClick(Sender: TObject);
@@ -333,14 +333,17 @@ begin
       Exit;
 
     { 为什么 showBitMap 的值为 nil  奇怪？ }
+
     if showBitMap <> nil then
       for Height := 0 to 225 - 1 do
         for Width := 0 to 225 - 1 do
         begin
           showBitMap.Canvas.Pixels[Width, Height] :=
-            Form1.imgShow.Picture.Bitmap.Canvas.Pixels
+            gSourceBitMap.Canvas.Pixels
             [Floor(Width / 15) + g_x - 7, Floor(Height / 15) + g_y - 7];
         end;
+
+
 
     Self.imgShow.Picture.Bitmap.Assign(showBitMap);
 
@@ -365,6 +368,9 @@ begin
   { 创建一个 TBitmap,用流 TStream 给他赋值 }
   aBitMap := TBitmap.Create;
   // aBitMap.Assign(Png);
+
+  gSourceBitMap := TBitmap.Create;
+
   showBitMap := TBitmap.Create;
   showBitMap.Height := 225;
   showBitMap.Width := 225;
@@ -384,6 +390,7 @@ begin
   FreeAndNil(Png);
   FreeAndNil(aStream);
   FreeAndNil(showBitMap);
+  FreeAndNil(gSourceBitMap);
 end;
 
 procedure TSetLargeForm.FormPaint(Sender: TObject);

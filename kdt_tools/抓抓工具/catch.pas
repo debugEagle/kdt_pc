@@ -146,7 +146,7 @@ implementation
 procedure TForm1.CreateParams(var Params: TCreateParams);
 begin
   inherited;
-  Params.ExStyle := 33554432; // 0x 02 00 00 00
+  // Params.ExStyle := 33554432; /// 0x 02 00 00 00
 end;
 
 function TForm1.ShowAImage(aFullName: string): Boolean; { 显示一个 image }
@@ -208,6 +208,8 @@ begin
     { 图片中显示之 }
   end;
   Result := True;
+  setLarge.gSourceBitMap.Assign(Self.imgShow.Picture.Bitmap);
+
 end;
 
 function TForm1.LoadAImage(aPicture: TPicture; aFullName: string): Boolean;
@@ -261,7 +263,9 @@ end;
 procedure TForm1.OnChangeSpeedBtnDown(Sender: TObject);
 var
   index: Integer;
+  fullName: string;
 begin
+  fullName := '';
   for index := 0 to Length(g_ImageArr) - 1 do
   begin
     if g_ImageArr[index].checkBtn = TSpeedButton(Sender) then
@@ -269,15 +273,13 @@ begin
       g_ImageArr[index].show := True;
       g_ImageArr[index].checkBtn.GroupIndex := 1;
       g_ImageArr[index].checkBtn.Down := True;
-      { 传递一个 当前图片的 index }
-      SendMessage(SetLargeForm.Handle, WM_USER + $202, index, 0);
-
-      imgShow.Picture.Assign(g_ImageArr[index].aPicture);
+      fullName := g_ImageArr[index].fullName;
     end
     else
       g_ImageArr[index].show := False;
   end;
 
+  Self.ShowAImage(fullName)
 end;
 
 procedure TForm1.HideSpeedBtns(aSpeedBtn: TSpeedButton);
@@ -600,7 +602,7 @@ end;
 
 function TForm1.OpenAPicByOpenDlg(): Boolean;
 var
-  fullName: string;
+  fullName, firstName: string;
   aPicture: TPicture;
   index: Integer;
 begin
@@ -614,11 +616,16 @@ begin
   for index := 0 to dlgOpenPic.Files.Count - 1 do
   begin
     fullName := dlgOpenPic.Files[index];
+    if (index = 0) and (fullName <> '') then
+      firstName := fullName;
+
     aPicture.LoadFromFile(fullName);
 
     Self.LoadAImage(aPicture, fullName); { 加载 图片信息 到 imageArr中，同时置显示为 false }
-    Self.ShowAImage(fullName); { 显示 imageArr 中 字符串为 fullName 的图片 }
   end;
+
+  if firstName <> '' then
+    Self.ShowAImage(firstName); { 显示 imageArr 中 字符串为 fullName 的图片 }
 
   aPicture.Free;
   Result := True;
@@ -867,20 +874,20 @@ begin
   begin
     // click 的热键
     // imgFirst.Canvas.Pixels(x,y);
-    FormClacData.edt_clickx.Text := IntToStr(X);
-    FormClacData.edt_clicky.Text := IntToStr(Y);
+    FormClacData.edt_clickx.Text := IntToStr(tmpX);
+    FormClacData.edt_clicky.Text := IntToStr(tmpY);
   end
   else if TWMHotKey(msg).hotkey = wtRangStart then
   begin
     // 起始坐标的 热键
-    FormClacData.edt_x1.Text := IntToStr(X);
-    FormClacData.edt_y1.Text := IntToStr(Y);
+    FormClacData.edt_x1.Text := IntToStr(tmpX);
+    FormClacData.edt_y1.Text := IntToStr(tmpY);
   end
   else if TWMHotKey(msg).hotkey = wtRangEnd then
   begin
     // 结束坐标的 热键
-    FormClacData.edt_x2.Text := IntToStr(X);
-    FormClacData.edt_y2.Text := IntToStr(Y);
+    FormClacData.edt_x2.Text := IntToStr(tmpX);
+    FormClacData.edt_y2.Text := IntToStr(tmpY);
   end
   else if TWMHotKey(msg).hotkey = wtCutPic then
   begin
@@ -1042,6 +1049,7 @@ end;
 procedure TForm1.imgShowMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Integer);
 begin
+
   if g_ImgShowLarge <> nil then
     Exit;
 
